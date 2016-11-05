@@ -46,9 +46,8 @@ Inputs:
  * `SearchDimension`: Determines how many dimensions to search in simultaneously. A (small) positive integer.
  * `Parallel`: Determines whether to use a `parfor` loop to invoke the objective function. A logical.
  
- 
- Ouputs:
-  * `xMean`: The optimal point.
-  * `BestFitness`: The value of the objective at that point.
-  * `Iterations`: The number of iterations performed.
-  * `NEvaluations`: The number of function evaluations performed. 
+Ouputs:
+ * `xMean`: The optimal point.
+ * `BestFitness`: The value of the objective at that point.
+ * `Iterations`: The number of iterations performed.
+ * `NEvaluations`: The number of function evaluations performed. 
