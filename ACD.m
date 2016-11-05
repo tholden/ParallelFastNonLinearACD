@@ -80,8 +80,8 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
     k_unsucc = 0.5;
     c1 = 0.5 / N;
     cmu = 0.5 / N;
-    Order = max( 0, floor( HowOftenUpdateRotation ) ); %integer >=0
-    SearchDimension = max( 1, floor( HowOftenUpdateRotation ) ); %integer >=1
+    Order = max( 0, floor( Order ) ); %integer >=0
+    SearchDimension = max( 1, floor( SearchDimension ) ); %integer >=1
     HowOftenUpdateRotation = max( 1, floor( HowOftenUpdateRotation ) ); %integer >=1    
 
     Sigma = min( Sigma, ( UB - LB ) * 0.25 );
