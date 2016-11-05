@@ -13,6 +13,8 @@
 
 function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, sigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, SearchDimension, Parallel )
 
+    xMean = xMean(:);
+    
     N = length( xMean );
     assert( N >= SearchDimension, 'The problem dimension should be weakly greater than the search dimension.' );    
     
@@ -24,6 +26,12 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
     end
     if isempty( UB )
         UB = Inf( N, 1 );
+    end
+    if length( LB ) == 1
+        LB = repmat( LB, N, 1 );
+    end
+    if length( UB ) == 1
+        UB = repmat( UB, N, 1 );
     end
     if isempty( A )
         A = zeros( 0, N );

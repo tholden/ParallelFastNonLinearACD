@@ -13,7 +13,10 @@
 
 function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD0( FitnessFunction, xMean, sigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation )
 
+    xMean = xMean(:);
+    
     N = length( xMean );
+    
     if isempty( sigma )
         sigma = ones( N, 1 );
     end
@@ -22,6 +25,12 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD0( FitnessFunctio
     end
     if isempty( UB )
         UB = Inf( N, 1 );
+    end
+    if length( LB ) == 1
+        LB = repmat( LB, N, 1 );
+    end
+    if length( UB ) == 1
+        UB = repmat( UB, N, 1 );
     end
     if isempty( A )
         A = zeros( 0, N );
