@@ -11,20 +11,26 @@
 % This source code includes the Adaptive Encoding procedure by Nikolaus Hansen, 2008
 % ---------------------------------------------------------------
 
-function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD0( FitnessFunction, xMean, sigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation )
+function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD0( FitnessFunction, xMean, Sigma, MinSigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation )
 
     xMean = xMean(:);
     
     N = length( xMean );
     
-    if isempty( sigma )
-        sigma = ones( N, 1 );
+    if isempty( Sigma )
+        Sigma = ones( N, 1 );
+    end
+    if isempty( MinSigma )
+        MinSigma = ones( N, 1 ) * sqrt( eps );
     end
     if isempty( LB )
         LB = -Inf( N, 1 );
     end
     if isempty( UB )
         UB = Inf( N, 1 );
+    end
+    if length( MinSigma ) == 1
+        MinSigma = repmat( MinSigma, N, 1 );
     end
     if length( LB ) == 1
         LB = repmat( LB, N, 1 );
@@ -38,6 +44,9 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD0( FitnessFunctio
     if isempty( b )
         b = zeros( 0, 1 );
     end
+    if isempty( StopFitness )
+        StopFitness = -Inf;
+    end
     %%% parameters
     k_succ = 1.1;       
     k_unsucc = 0.5;
@@ -45,7 +54,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD0( FitnessFunctio
     cmu = 0.5 / N;
     HowOftenUpdateRotation = floor(HowOftenUpdateRotation); %integer >=1
 
-    sigma = min( sigma, ( UB - LB ) * 0.25 );
+    Sigma = min( Sigma, ( UB - LB ) * 0.25 );
 
     BestFitness = 1e+30;
     NEvaluations = 0;
@@ -71,7 +80,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD0( FitnessFunctio
         end
         
         %%% Sample two candidate solutions
-        dx = sigma(ix,1) * B(:,ix); % shift along ix'th principal component, the computational complexity is linear
+        dx = Sigma(ix,1) * B(:,ix); % shift along ix'th principal component, the computational complexity is linear
         x1 = clamp( xMean, -dx, LB, UB, A, b );       % first point to test along ix'th principal component
         x2 = clamp( xMean, dx, LB, UB, A, b );        % second point to test is symmetric to the first one on the same ix'principal component
         
@@ -104,10 +113,14 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD0( FitnessFunctio
 
         %%% Adapt step-size sigma depending on the success/unsuccess of the previous search
         if lsucc % increase the step-size
-            sigma(ix,1) = sigma(ix,1) * k_succ;     % default k_succ = 1.1
+            Sigma(ix,1) = Sigma(ix,1) * k_succ;     % default k_succ = 1.1
             somebetter = true;
         else            % decrease the step-size
-            sigma(ix,1) = sigma(ix,1) * k_unsucc;   % default k_unsucc = 0.5
+            Sigma(ix,1) = Sigma(ix,1) * k_unsucc;   % default k_unsucc = 0.5
+        end
+
+        if all( Sigma < MinSigma )
+            break
         end
 
         %%% Update archive 

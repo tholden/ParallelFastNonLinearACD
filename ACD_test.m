@@ -39,7 +39,7 @@ itertotal = 0;
 tic
 while (nevaltotal < MAX_EVAL) && (fcurrent > ftarget)
     maxeval_available = MAX_EVAL - nevaltotal;
-    [xmean, fcurrent, iter, neval] = ACD(ffunc,zeros(N,1),2.5,[],[],[],[],maxeval_available,ftarget,howOftenUpdateRotation,Order,SearchDimension,Parallel);
+    [xmean, fcurrent, iter, neval] = ACD(ffunc,zeros(N,1),2.5,0,[],[],[],[],maxeval_available,ftarget,howOftenUpdateRotation,Order,SearchDimension,Parallel);
     nevaltotal = nevaltotal + neval;
     itertotal = itertotal + iter;
 end;

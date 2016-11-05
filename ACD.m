@@ -11,21 +11,27 @@
 % This source code includes the Adaptive Encoding procedure by Nikolaus Hansen, 2008
 % ---------------------------------------------------------------
 
-function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, sigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, SearchDimension, Parallel )
+function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, Sigma, MinSigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, SearchDimension, Parallel )
 
     xMean = xMean(:);
     
     N = length( xMean );
     assert( N >= SearchDimension, 'The problem dimension should be weakly greater than the search dimension.' );    
     
-    if isempty( sigma )
-        sigma = ones( N, 1 );
+    if isempty( Sigma )
+        Sigma = ones( N, 1 );
+    end
+    if isempty( MinSigma )
+        MinSigma = ones( N, 1 ) * sqrt( eps );
     end
     if isempty( LB )
         LB = -Inf( N, 1 );
     end
     if isempty( UB )
         UB = Inf( N, 1 );
+    end
+    if length( MinSigma ) == 1
+        MinSigma = repmat( MinSigma, N, 1 );
     end
     if length( LB ) == 1
         LB = repmat( LB, N, 1 );
@@ -39,6 +45,9 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
     if isempty( b )
         b = zeros( 0, 1 );
     end
+    if isempty( StopFitness )
+        StopFitness = -Inf;
+    end
     %%% parameters
     k_succ = 1.1;       
     k_unsucc = 0.5;
@@ -46,7 +55,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
     cmu = 0.5 / N;
     HowOftenUpdateRotation = max( 1, floor( HowOftenUpdateRotation ) ); %integer >=1
 
-    sigma = min( sigma, ( UB - LB ) * 0.25 );
+    Sigma = min( Sigma, ( UB - LB ) * 0.25 );
 
     BestFitness = 1e+30;
     NEvaluations = 0;
@@ -92,7 +101,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
         
         qix = ixPerm( qIndices );
         %%% Sample NPoints candidate solutions
-        dx = bsxfun( @times, sigma(qix,1)', B(:,qix) ); % shift along qix'th principal component, the computational complexity is linear
+        dx = bsxfun( @times, Sigma(qix,1)', B(:,qix) ); % shift along qix'th principal component, the computational complexity is linear
         
         x = zeros( N, NPoints );
         Fit = NaN( NPoints, 1 );
@@ -137,10 +146,14 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
         foundAlpha = max( abs( alpha( :, minFitLoc ) ) );
         
         if lsucc % increase the step-size
-            sigma(qix,1) = sigma(qix,1) * foundAlpha * k_succ;     % default k_succ = 1.1
+            Sigma(qix,1) = Sigma(qix,1) * foundAlpha * k_succ;     % default k_succ = 1.1
             somebetter = true;
         else            % decrease the step-size
-            sigma(qix,1) = sigma(qix,1) * min( k_unsucc, foundAlpha * k_unsucc );   % default k_unsucc = 0.5
+            Sigma(qix,1) = Sigma(qix,1) * min( k_unsucc, foundAlpha * k_unsucc );   % default k_unsucc = 0.5
+        end
+        
+        if all( Sigma < MinSigma )
+            break
         end
 
         %%% Update archive 
