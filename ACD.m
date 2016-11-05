@@ -1,3 +1,27 @@
+% `[ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, sigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, SearchDimension, Parallel );`
+% 
+% Inputs:
+%  * `FitnessFunction`: The objective function, a function handle.
+%  * `xMean`: The initial point.
+%  * `Sigma`: The initial search radius. Either a scalar, or a vector of search radiuses by coordinate, with the same number of elements as xMean.
+%  * `MinSigma`: The minimum search radius. The search will stop when all coordinates of sigma are below this value. Either a scalar, or a vector of minimum search radiuses by coordinate, with the same number of elements as xMean.
+%  * `LB`: A lower bound on the search for `xMean`. Either empty, a scalar, or a vector of lower bounds by coordinate, with the same number of elements as xMean.
+%  * `UB`: A lower bound on the search for `xMean`. Either empty, a scalar, or a vector of upper bounds by coordinate, with the same number of elements as xMean.
+%  * `A`: The `A` matrix from the inequality `A*x <= b`. May be empty if `b` is also empty.
+%  * `b`: The `b` vector from the inequality `A*x <= b`. May be empty if `b` is also empty.
+%  * `MaxEvaluations`: The maximum number of total function evaluations. (Set to `Inf` if this is empty.)
+%  * `StopFitness`: The terminal fitness. (Set to `-Inf` if this is empty.)
+%  * `HowOftenUpdateRotation`: How often the rotation should be updated. On problems with slow objective functions, this should be equal to `1`. Larger values may speed up computation if the objective function is very fast.
+%  * `Order`: Determines the number of points to use to search along each direction. A (small) non-negative integer.
+%  * `SearchDimension`: Determines how many dimensions to search in simultaneously. A (small) positive integer.
+%  * `Parallel`: Determines whether to use a `parfor` loop to invoke the objective function. A logical.
+%  
+%  Ouputs:
+%   * `xMean`: The optimal point.
+%   * `BestFitness`: The value of the objective at that point.
+%   * `Iterations`: The number of iterations performed.
+%   * `NEvaluations`: The number of function evaluations performed. 
+% 
 % ---------------------------------------------------------------
 % Adaptive Coordinate Descent. To be used under the terms of the BSD license 
 % Author : Ilya Loshchilov, Marc Schoenauer, Michele Sebag, 2012.  
