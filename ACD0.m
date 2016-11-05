@@ -44,6 +44,9 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD0( FitnessFunctio
     if isempty( b )
         b = zeros( 0, 1 );
     end
+    if isempty( MaxEvaluations )
+        MaxEvaluations = Inf;
+    end
     if isempty( StopFitness )
         StopFitness = -Inf;
     end
