@@ -2,7 +2,7 @@ function x = nsobol1( n )
     assert( n >= 2 );
     persistent p d
     if isempty( p )
-        p = sobolset( 1, 'Skip', 2 );
+        p = sobolset( 1, 'Skip', 1 );
     end
     if isempty( p ) || length( d ) < n
         d = norminv( net( p, n ) );

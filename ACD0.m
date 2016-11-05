@@ -11,9 +11,9 @@
 % This source code includes the Adaptive Encoding procedure by Nikolaus Hansen, 2008
 % ---------------------------------------------------------------
 
-function [ xmean, bestFit, iter, neval ] = ACD0( fitnessfct, xmean, sigma, LB, UB, A, b, MAX_EVAL, stopfitness, howOftenUpdateRotation )
+function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD0( FitnessFunction, xMean, sigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation )
 
-    N = length( xmean );
+    N = length( xMean );
     if isempty( sigma )
         sigma = ones( N, 1 );
     end
@@ -34,16 +34,16 @@ function [ xmean, bestFit, iter, neval ] = ACD0( fitnessfct, xmean, sigma, LB, U
     k_unsucc = 0.5;
     c1 = 0.5 / N;
     cmu = 0.5 / N;
-    howOftenUpdateRotation = floor(howOftenUpdateRotation); %integer >=1
+    HowOftenUpdateRotation = floor(HowOftenUpdateRotation); %integer >=1
 
     sigma = min( sigma, ( UB - LB ) * 0.25 );
 
-    bestFit = 1e+30;
-    neval = 0;
+    BestFitness = 1e+30;
+    NEvaluations = 0;
 
     B = eye(N,N);
 
-    iter = 0;
+    Iterations = 0;
     firstAE = true;
     ix = 0;
     somebetter = false;
@@ -54,8 +54,8 @@ function [ xmean, bestFit, iter, neval ] = ACD0( fitnessfct, xmean, sigma, LB, U
 
     % -------------------- Generation Loop --------------------------------
 
-    while (neval < MAX_EVAL) && (bestFit > stopfitness)
-        iter = iter + 1;
+    while (NEvaluations < MaxEvaluations) && (BestFitness > StopFitness)
+        Iterations = Iterations + 1;
         ix = ix + 1;
         if ix > N
             ix = 1;
@@ -63,25 +63,33 @@ function [ xmean, bestFit, iter, neval ] = ACD0( fitnessfct, xmean, sigma, LB, U
         
         %%% Sample two candidate solutions
         dx = sigma(ix,1) * B(:,ix); % shift along ix'th principal component, the computational complexity is linear
-        x1 = clamp( xmean, -dx, LB, UB, A, b );       % first point to test along ix'th principal component
-        x2 = clamp( xmean, dx, LB, UB, A, b );        % second point to test is symmetric to the first one on the same ix'principal component
+        x1 = clamp( xMean, -dx, LB, UB, A, b );       % first point to test along ix'th principal component
+        x2 = clamp( xMean, dx, LB, UB, A, b );        % second point to test is symmetric to the first one on the same ix'principal component
         
-        %%% Compute Fitness   
-        Fit1 = fitnessfct( x1 );
-        neval = neval + 1;
-        Fit2 = fitnessfct( x2 );   
-        neval = neval + 1;
+        %%% Compute Fitness
+        try
+            Fit1 = FitnessFunction( x1 );
+        catch
+            Fit1 = NaN;
+        end
+        NEvaluations = NEvaluations + 1;
+        try
+            Fit2 = FitnessFunction( x2 );   
+        catch
+            Fit2 = NaN;
+        end
+        NEvaluations = NEvaluations + 1;
 
         %%% Who is the next mean point?  
         lsucc = false;
-        if Fit1 < bestFit
-            bestFit = Fit1;
-            xmean = x1;
+        if Fit1 < BestFitness
+            BestFitness = Fit1;
+            xMean = x1;
             lsucc = true;
         end
-        if Fit2 < bestFit
-            bestFit = Fit2;
-            xmean = x2;
+        if Fit2 < BestFitness
+            BestFitness = Fit2;
+            xMean = x2;
             lsucc = true;
         end
 
@@ -111,28 +119,19 @@ function [ xmean, bestFit, iter, neval ] = ACD0( fitnessfct, xmean, sigma, LB, U
             [~, arindex] = sort(allf,2,'ascend');
             allxbest = allx(:,arindex(1:N));
             if firstAE
-                ae = ACD_AEupdateFAST([], allxbest, c1, cmu,howOftenUpdateRotation);    % initialize encoding
+                ae = ACD_AEupdateFAST([], allxbest, c1, cmu,HowOftenUpdateRotation);    % initialize encoding
                 ae.B = B;
                 ae.Bo = ae.B;     % assuming the initial B is orthogonal
                 ae.invB = ae.B';  % assuming the initial B is orthogonal
                 firstAE = false;
             else 
-                ae = ACD_AEupdateFAST(ae, allxbest, c1, cmu,howOftenUpdateRotation);    % adapt encoding 
+                ae = ACD_AEupdateFAST(ae, allxbest, c1, cmu,HowOftenUpdateRotation);    % adapt encoding 
             end
             B = ae.B;
         end    
         
-        if rem(iter,1000) == 0
-            disp([ num2str(iter) ' ' num2str(neval) ' ' num2str(bestFit) ]);
+        if rem(Iterations,1000) == 0
+            disp([ num2str(Iterations) ' ' num2str(NEvaluations) ' ' num2str(BestFitness) ]);
         end
     end
-end
-
-function x = clamp( xmean, dx, LB, UB, A, b )
-    dxpos = dx > 0;
-    dxneg = dx < 0;
-    Adx = A * dx;
-    Adxpos = Adx > 0;
-    alpha = min( [ 1; ( b( Adxpos ) - A( ( Adxpos ), : ) * xmean ) ./ Adx( Adxpos ); ( LB( dxneg ) - xmean( dxneg ) ) ./ dx( dxneg ); ( UB( dxpos ) - xmean( dxpos ) ) ./ dx( dxpos ) ] );
-    x = xmean + alpha * dx;
 end

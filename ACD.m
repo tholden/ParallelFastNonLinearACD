@@ -11,9 +11,11 @@
 % This source code includes the Adaptive Encoding procedure by Nikolaus Hansen, 2008
 % ---------------------------------------------------------------
 
-function [ xmean, bestFit, iter, neval ] = ACD3( fitnessfct, xmean, sigma, LB, UB, A, b, MAX_EVAL, stopfitness, howOftenUpdateRotation, Order )
+function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, sigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, SearchDimension, Parallel )
 
-    N = length( xmean );
+    N = length( xMean );
+    assert( N >= SearchDimension, 'The problem dimension should be weakly greater than the search dimension.' );    
+    
     if isempty( sigma )
         sigma = ones( N, 1 );
     end
@@ -34,49 +36,50 @@ function [ xmean, bestFit, iter, neval ] = ACD3( fitnessfct, xmean, sigma, LB, U
     k_unsucc = 0.5;
     c1 = 0.5 / N;
     cmu = 0.5 / N;
-    howOftenUpdateRotation = floor(howOftenUpdateRotation); %integer >=1
+    HowOftenUpdateRotation = max( 1, floor( HowOftenUpdateRotation ) ); %integer >=1
 
     sigma = min( sigma, ( UB - LB ) * 0.25 );
 
-    bestFit = 1e+30;
-    neval = 0;
+    BestFitness = 1e+30;
+    NEvaluations = 0;
 
     B = eye(N,N);
 
-    iter = 0;
+    Iterations = 0;
     firstAE = true;
     ix = 0;
     somebetter = false;
 
-    Dimension = 3;
-    NoD = ceil( N / Dimension );
+    NoD = ceil( N / SearchDimension );
     
-    UNPoints = 2 .^ ( 2 + Order ) - 2;
-    NPoints = ( 1 + UNPoints ) .^ Dimension - 1;
-    Ualpha = [ 0; nsobol1( UNPoints ) ];
-    [ alphaX, alphaY, alphaZ ] = meshgrid( Ualpha, Ualpha, Ualpha );
-    alpha = [ alphaX( 2:end ); alphaY( 2:end ); alphaZ( 2:end ) ];
+    UNPoints = 2 .^ ( 2 + Order ) - 1;
+    NPoints = UNPoints .^ SearchDimension - 1;
+    CellUalpha = repmat( { nsobol1( UNPoints )' }, 1, SearchDimension );
+    [ CellUalpha{:} ] = ndgrid( CellUalpha{:} );
+    alpha = cell2mat( cellfun( @(alphaCoord) reshape( alphaCoord( 2:end ), 1, NPoints ), CellUalpha, 'UniformOutput', false )' );
     
     allx = NaN( N, NPoints*NoD );
     allf = NaN( 1, NPoints*NoD );
 
     disp( [ 'Using ' num2str( NPoints ) ' points per iteration.' ] );
-    disp( 'This number should be higher than your number of parallel workers.' );
+    if Parallel
+        disp( 'This number should ideally be equal to or just below a multiple (possibly 1) of your number of parallel workers.' );
+    end
     
     stream = RandStream( 'mt19937ar', 'Seed', 0 );
     ixPerm = randperm( stream, N );
 
     % -------------------- Generation Loop --------------------------------
 
-    while (neval < MAX_EVAL) && (bestFit > stopfitness)
-        iter = iter + 1;
+    while (NEvaluations < MaxEvaluations) && (BestFitness > StopFitness)
+        Iterations = Iterations + 1;
         ix = ix + 1;
         if ix > NoD
             ix = 1;
             ixPerm = randperm( stream, N );
         end
 
-        qIndices = ( ix - 1 ) * Dimension + ( 1 : Dimension );
+        qIndices = ( ix - 1 ) * SearchDimension + ( 1 : SearchDimension );
         qIndices( qIndices > N ) = qIndices( qIndices > N ) - N;
         
         qix = ixPerm( qIndices );
@@ -84,24 +87,41 @@ function [ xmean, bestFit, iter, neval ] = ACD3( fitnessfct, xmean, sigma, LB, U
         dx = bsxfun( @times, sigma(qix,1)', B(:,qix) ); % shift along qix'th principal component, the computational complexity is linear
         
         x = zeros( N, NPoints );
-        Fit = zeros( NPoints, 1 );
+        Fit = NaN( NPoints, 1 );
 
-        parfor iPoint = 1 : NPoints
+        if Parallel
+            parfor iPoint = 1 : NPoints
 
-            x( :, iPoint ) = clamp( xmean, dx * alpha( :, iPoint ), LB, UB, A, b );       % first point to test along qix'th principal component
-        
-            %%% Compute Fitness   
-            Fit( iPoint ) = fitnessfct( x( :, iPoint ) ); %#ok<PFBNS>
-            
+                x( :, iPoint ) = clamp( xMean, dx * alpha( :, iPoint ), LB, UB, A, b );       % first point to test along qix'th principal component
+
+                %%% Compute Fitness   
+                try
+                    Fit( iPoint ) = FitnessFunction( x( :, iPoint ) ); %#ok<PFBNS>
+                catch
+                end
+
+            end
+        else
+            for iPoint = 1 : NPoints
+
+                x( :, iPoint ) = clamp( xMean, dx * alpha( :, iPoint ), LB, UB, A, b );       % first point to test along qix'th principal component
+
+                %%% Compute Fitness   
+                try
+                    Fit( iPoint ) = FitnessFunction( x( :, iPoint ) );
+                catch
+                end
+
+            end
         end
-        neval = neval + NPoints;
+        NEvaluations = NEvaluations + NPoints;
 
         %%% Who is the next mean point?  
         lsucc = false;
         [ minFit, minFitLoc ] = min( Fit );
-        if minFit < bestFit
-            bestFit = minFit;
-            xmean = x( :, minFitLoc );
+        if minFit < BestFitness
+            BestFitness = minFit;
+            xMean = x( :, minFitLoc );
             lsucc = true;
         end
 
@@ -127,28 +147,19 @@ function [ xmean, bestFit, iter, neval ] = ACD3( fitnessfct, xmean, sigma, LB, U
             [~, arindex] = sort(allf,2,'ascend');
             allxbest = allx(:,arindex(1:N));
             if firstAE
-                ae = ACD_AEupdateFAST([], allxbest, c1, cmu,howOftenUpdateRotation);    % initialize encoding
+                ae = ACD_AEupdateFAST([], allxbest, c1, cmu,HowOftenUpdateRotation);    % initialize encoding
                 ae.B = B;
                 ae.Bo = ae.B;     % assuming the initial B is orthogonal
                 ae.invB = ae.B';  % assuming the initial B is orthogonal
                 firstAE = false;
             else 
-                ae = ACD_AEupdateFAST(ae, allxbest, c1, cmu,howOftenUpdateRotation);    % adapt encoding 
+                ae = ACD_AEupdateFAST(ae, allxbest, c1, cmu,HowOftenUpdateRotation);    % adapt encoding 
             end
             B = ae.B;
         end    
         
-        if rem(iter,1000) == 0
-            disp([ num2str(iter) ' ' num2str(neval) ' ' num2str(bestFit) ]);
+        if rem(Iterations,1000) == 0
+            disp([ num2str(Iterations) ' ' num2str(NEvaluations) ' ' num2str(BestFitness) ]);
         end
     end
-end
-
-function x = clamp( xmean, dx, LB, UB, A, b )
-    dxpos = dx > 0;
-    dxneg = dx < 0;
-    Adx = A * dx;
-    Adxpos = Adx > 0;
-    alpha = min( [ 1; ( b( Adxpos ) - A( ( Adxpos ), : ) * xmean ) ./ Adx( Adxpos ); ( LB( dxneg ) - xmean( dxneg ) ) ./ dx( dxneg ); ( UB( dxpos ) - xmean( dxpos ) ) ./ dx( dxpos ) ] );
-    x = xmean + alpha * dx;
 end
