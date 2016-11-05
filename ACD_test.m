@@ -28,7 +28,7 @@ fcurrent = 1e+30;
 
 Order = 1;
 SearchDimension = 2;
-Parallel = true;
+Parallel = false;
 
 howOftenUpdateRotation = 1; % at each iteration -> quadratic time complexity of the algorithm, but need less function evaluations to reach the optimum
 % howOftenUpdateRotation = floor(dim/10); % every N/10 iterations -> linear time complexity of the algorithm, but need more function evaluations to reach the optimum
