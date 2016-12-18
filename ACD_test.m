@@ -26,9 +26,10 @@ x_a = -5.0; x_b = 5.0;
 ftarget = 1e-10;
 fcurrent = 1e+30;
 
-Order = 1;
-SearchDimension = 2;
-Parallel = false;
+Order = 2;
+NonProductSearchDimension = 2;
+ProductSearchDimension = 2;
+Parallel = true;
 
 howOftenUpdateRotation = 1; % at each iteration -> quadratic time complexity of the algorithm, but need less function evaluations to reach the optimum
 % howOftenUpdateRotation = floor(dim/10); % every N/10 iterations -> linear time complexity of the algorithm, but need more function evaluations to reach the optimum
@@ -39,7 +40,7 @@ itertotal = 0;
 tic
 while (nevaltotal < MAX_EVAL) && (fcurrent > ftarget)
     maxeval_available = MAX_EVAL - nevaltotal;
-    [xmean, fcurrent, iter, neval] = ACD(ffunc,zeros(N,1),2.5,0,[],[],[],[],maxeval_available,ftarget,howOftenUpdateRotation,Order,SearchDimension,Parallel);
+    [xmean, fcurrent, iter, neval] = ACD(ffunc,zeros(N,1),2.5,0,[],[],[],[],maxeval_available,ftarget,howOftenUpdateRotation,Order,NonProductSearchDimension,ProductSearchDimension,Parallel);
     nevaltotal = nevaltotal + neval;
     itertotal = itertotal + iter;
 end;

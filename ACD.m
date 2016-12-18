@@ -1,4 +1,4 @@
-% `[ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, sigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, SearchDimension, Parallel );`
+% `[ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, sigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, NonProductSearchDimension, ProductSearchDimension, Parallel );`
 % 
 % Inputs:
 %  * `FitnessFunction`: The objective function, a function handle.
@@ -12,8 +12,9 @@
 %  * `MaxEvaluations`: The maximum number of total function evaluations. (Set to `Inf` if this is empty.)
 %  * `StopFitness`: The terminal fitness. (Set to `-Inf` if this is empty.)
 %  * `HowOftenUpdateRotation`: How often the rotation should be updated. On problems with slow objective functions, this should be equal to `1`. Larger values may speed up computation if the objective function is very fast.
-%  * `Order`: Determines the number of points to use to search along each direction. A (small) non-negative integer.
-%  * `SearchDimension`: Determines how many dimensions to search in simultaneously. A (small) positive integer.
+%  * `Order`: Determines the number of points to use to search along each group of NonProductSearchDirection directions. A (small) non-negative integer.
+%  * `NonProductSearchDimension`: NonProductSearchDimension*ProductSearchDimension determines how many dimensions to search in simultaneously. A (small) positive integer.
+%  * `ProductSearchDimension`: NonProductSearchDimension*ProductSearchDimension determines how many dimensions to search in simultaneously. A (small) positive integer.
 %  * `Parallel`: Determines whether to use a `parfor` loop to invoke the objective function. A logical.
 %  
 %  Ouputs:
@@ -35,12 +36,16 @@
 % This source code includes the Adaptive Encoding procedure by Nikolaus Hansen, 2008
 % ---------------------------------------------------------------
 
-function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, Sigma, MinSigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, SearchDimension, Parallel )
+function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, Sigma, MinSigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, NonProductSearchDimension, ProductSearchDimension, Parallel )
 
     xMean = xMean(:);
     
+    NonProductSearchDimension = max( 1, floor( NonProductSearchDimension ) ); %integer >=1
+    ProductSearchDimension = max( 1, floor( ProductSearchDimension ) ); %integer >=1
+    SearchDimension = NonProductSearchDimension * ProductSearchDimension;
+    
     N = length( xMean );
-    assert( N >= SearchDimension, 'The problem dimension should be weakly greater than the search dimension.' );    
+    assert( N >= SearchDimension, 'The problem dimension should be weakly greater than NonProductSearchDimension * ProductSearchDimension.' );    
     
     if isempty( Sigma )
         Sigma = ones( N, 1 );
@@ -80,8 +85,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
     k_unsucc = 0.5;
     c1 = 0.5 / N;
     cmu = 0.5 / N;
-    Order = max( 0, floor( Order ) ); %integer >=0
-    SearchDimension = max( 1, floor( SearchDimension ) ); %integer >=1
+    Order = max( 1, floor( Order ) ); %integer >=1
     HowOftenUpdateRotation = max( 1, floor( HowOftenUpdateRotation ) ); %integer >=1    
 
     Sigma = min( Sigma, ( UB - LB ) * 0.25 );
@@ -98,11 +102,21 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
 
     NoD = ceil( N / SearchDimension );
     
-    UNPoints = 2 .^ ( 2 + Order ) - 1;
-    NPoints = UNPoints .^ SearchDimension - 1;
-    CellUalpha = repmat( { nsobol1( UNPoints )' }, 1, SearchDimension );
-    [ CellUalpha{:} ] = ndgrid( CellUalpha{:} );
-    alpha = cell2mat( cellfun( @(alphaCoord) reshape( alphaCoord( 2:end ), 1, NPoints ), CellUalpha, 'UniformOutput', false )' );
+    UNPoints = 2 .^ ( NonProductSearchDimension + Order ) - 1;
+    NPoints = UNPoints .^ ProductSearchDimension - 1;
+    
+    SobolPoints = nsobol( UNPoints, NonProductSearchDimension );
+    assert( all( mean( SobolPoints ) < 1e-12 ) );
+    SobolPoints = bsxfun( @minus, SobolPoints, mean( SobolPoints ) );
+    RootCovSobolPoints = sqrtm( cov( SobolPoints ) );
+    assert( std( diag( RootCovSobolPoints ) ) ./ mean( diag( RootCovSobolPoints ) ) < 1e-6 );
+    SobolPoints = ( SobolPoints / RootCovSobolPoints )';
+    
+    IdxCell_alpha = repmat( { 1:UNPoints }, 1, ProductSearchDimension );
+    [ IdxCell_alpha{:} ] = ndgrid( IdxCell_alpha{:} );
+    AllIdxUalpha = cell2mat( cellfun( @(alphaCoord) reshape( alphaCoord( 2:end ), 1, NPoints ), IdxCell_alpha, 'UniformOutput', false )' );
+    [ ~, SortIdx_alpha ] = sortrows( sort( AllIdxUalpha, 1, 'descend' )' );
+    alpha = cell2mat( arrayfun( @( idx ) { SobolPoints( :, idx ) }, AllIdxUalpha( :, SortIdx_alpha ) ) );
     
     allx = NaN( N, NPoints*NoD );
     allf = NaN( 1, NPoints*NoD );
