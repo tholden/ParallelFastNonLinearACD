@@ -14,6 +14,8 @@
 
 N = 10; % try 2,40,100,1000
 
+addpath( './tests' );
+
 ffunc = @frosenbrock;
 %ffunc = @fsphere;
 %ffunc = @felli;
