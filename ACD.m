@@ -1,7 +1,7 @@
 % `[ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, sigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, NonProductSearchDimension, ProductSearchDimension, Parallel );`
 % 
 % Inputs:
-%  * `FitnessFunction`: The objective function, a function handle.
+%  * `FitnessFunction`: The objective function, a function handle. The objective must be vectorized, supporting a matrix of inputs (with one column per observation), and returning a vector of outputs. To assist with converting arbitrary functions to this form, three wrappers (SerialWrapper, ParForParallelWrapper, TimedParallelWrapper) are provided.
 %  * `xMean`: The initial point.
 %  * `Sigma`: The initial search radius. Either a scalar, or a vector of search radiuses by coordinate, with the same number of elements as xMean.
 %  * `MinSigma`: The minimum search radius. The search will stop when all coordinates of sigma are below this value. Either a scalar, or a vector of minimum search radiuses by coordinate, with the same number of elements as xMean.
@@ -15,7 +15,6 @@
 %  * `Order`: Determines the number of points to use to search along each group of NonProductSearchDirection directions. A (small) non-negative integer.
 %  * `NonProductSearchDimension`: NonProductSearchDimension*ProductSearchDimension determines how many dimensions to search in simultaneously. A (small) positive integer.
 %  * `ProductSearchDimension`: NonProductSearchDimension*ProductSearchDimension determines how many dimensions to search in simultaneously. A (small) positive integer.
-%  * `Parallel`: Determines whether to use a `parfor` loop to invoke the objective function. A logical.
 %  * `Resume`: Whether to resume the past run. A logical.
 %  
 %  Ouputs:
@@ -37,8 +36,12 @@
 % This source code includes the Adaptive Encoding procedure by Nikolaus Hansen, 2008
 % ---------------------------------------------------------------
 
-function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, Sigma, MinSigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, NonProductSearchDimension, ProductSearchDimension, Parallel, Resume )
+function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, Sigma, MinSigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, NonProductSearchDimension, ProductSearchDimension, Resume )
 
+    %%% parameters
+    k_succ = 0.1;       
+    k_unsucc = 0.5;
+    
     xMean = xMean(:);
     
     NonProductSearchDimension = max( 1, floor( NonProductSearchDimension ) ); %integer >=1
@@ -81,9 +84,6 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
     if isempty( StopFitness )
         StopFitness = -Inf;
     end
-    %%% parameters
-    k_succ = 1.1;       
-    k_unsucc = 0.5;
     c1 = 0.5 / N;
     cmu = 0.5 / N;
     Order = max( 1, floor( Order ) ); %integer >=1
@@ -108,10 +108,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
     
     SobolPoints = nsobol( UNPoints, NonProductSearchDimension );
     assert( all( mean( SobolPoints ) < 1e-12 ) );
-    SobolPoints = bsxfun( @minus, SobolPoints, mean( SobolPoints ) );
-    RootCovSobolPoints = sqrtm( cov( SobolPoints ) );
-    assert( std( diag( RootCovSobolPoints ) ) ./ mean( diag( RootCovSobolPoints ) ) < 1e-6 );
-    SobolPoints = ( SobolPoints / RootCovSobolPoints )';
+    SobolPoints = SobolPoints';
     assert( size( SobolPoints, 1 ) == NonProductSearchDimension );
     
     VAbsSobolPoints = unique( abs( SobolPoints(:) ), 'stable' );
@@ -122,29 +119,33 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
     fij = unique( max( fi, fj ) );
     VAbsSobolPoints( fij ) = [];
     
-    SobolPoints = SobolPoints ./ VAbsSobolPoints( 2 );
-    VAbsSobolPoints = VAbsSobolPoints ./ VAbsSobolPoints( 2 );
+    SobolScale = norm( SobolPoints( :, 2 ) );
+    VAbsSobolPoints = VAbsSobolPoints ./ SobolScale;
+    SobolPoints = SobolPoints ./ SobolScale;
     
     IdxSobolPoints = arrayfun( @(spc) find( abs( VAbsSobolPoints - abs( spc ) ) < seps, 1 ), SobolPoints );
+    muCriticalIdx = max( max( IdxSobolPoints( :, 2 : ( 1 + 2 * NonProductSearchDimension ) ) ) );
     
     IdxCell_alpha = repmat( { 1 : UNPoints }, 1, ProductSearchDimension );
     [ IdxCell_alpha{:} ] = ndgrid( IdxCell_alpha{:} );
     AllIdxUalpha = cell2mat( cellfun( @(alphaCoord) reshape( alphaCoord( 2:end ), 1, NPoints ), IdxCell_alpha, 'UniformOutput', false )' );
     AllIdx_alpha = cell2mat( arrayfun( @( idx ) { IdxSobolPoints( :, idx ) }, AllIdxUalpha ) );
-    [ ~, SortIdx_alpha ] = sortrows( [ sort( AllIdx_alpha, 1, 'descend' )', sort( AllIdxUalpha, 1, 'descend' )', ( 1 : NPoints )' ] );
+    [ SortedIndices, SortIdx_alpha ] = sortrows( [ sort( AllIdx_alpha, 1, 'descend' )', sort( AllIdxUalpha, 1, 'descend' )', ( 1 : NPoints )' ] );
     alpha = cell2mat( arrayfun( @( idx ) { SobolPoints( :, idx ) }, AllIdxUalpha( :, SortIdx_alpha ) ) );
     
     allx = NaN( N, NPoints*NoD );
     allf = NaN( 1, NPoints*NoD );
 
-    disp( [ 'Using ' num2str( NPoints ) ' points per iteration.' ] );
-    if Parallel
-        disp( 'This number should ideally be equal to or just below a multiple (possibly 1) of your number of parallel workers.' );
-    end
+    disp( [ 'Using up to ' num2str( NPoints ) ' points per iteration.' ] );
     
     stream = RandStream( 'mt19937ar', 'Seed', 0 );
     ixPerm = randperm( stream, N );
 
+    mu = find( SortedIndices( :, 1 ) > muCriticalIdx, 1 ) - 1;
+    
+    disp( 'Minimal alpha:' );
+    disp( alpha( :, 1:mu ) );
+    
     % -------------------- Generation Loop --------------------------------
 
     while (NEvaluations < MaxEvaluations) && (BestFitness > StopFitness)
@@ -168,33 +169,13 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
         dx = bsxfun( @times, Sigma(qix,1)', B(:,qix) ); % shift along qix'th principal component, the computational complexity is linear
         
         x = zeros( N, NPoints );
-        Fit = NaN( NPoints, 1 );
 
-        if Parallel
-            parfor iPoint = 1 : NPoints
+        for iPoint = 1 : NPoints
 
-                x( :, iPoint ) = clamp( xMean, dx * alpha( :, iPoint ), LB, UB, A, b );       % first point to test along qix'th principal component
+            x( :, iPoint ) = clamp( xMean, dx * alpha( :, iPoint ), LB, UB, A, b );       % first point to test along qix'th principal component
 
-                %%% Compute Fitness   
-                try
-                    Fit( iPoint ) = FitnessFunction( x( :, iPoint ) ); %#ok<PFBNS>
-                catch
-                end
-
-            end
-        else
-            for iPoint = 1 : NPoints
-
-                x( :, iPoint ) = clamp( xMean, dx * alpha( :, iPoint ), LB, UB, A, b );       % first point to test along qix'th principal component
-
-                %%% Compute Fitness   
-                try
-                    Fit( iPoint ) = FitnessFunction( x( :, iPoint ) );
-                catch
-                end
-
-            end
         end
+        Fit = FitnessFunction( x, mu );
         NEvaluations = NEvaluations + NPoints;
 
         %%% Who is the next mean point?  
@@ -207,13 +188,13 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
         end
 
         %%% Adapt step-size sigma depending on the success/unsuccess of the previous search
-        foundAlpha = norm( alpha( :, minFitLoc ) );
+        foundAlpha = alpha( :, minFitLoc );
         
         if lsucc % increase the step-size
-            Sigma(qix,1) = Sigma(qix,1) * foundAlpha * k_succ;     % default k_succ = 1.1
+            Sigma(qix,1) = Sigma(qix,1) .* ( 1 + abs( foundAlpha ) * k_succ );
             somebetter = true;
         else            % decrease the step-size
-            Sigma(qix,1) = Sigma(qix,1) * min( k_unsucc, foundAlpha * k_unsucc );   % default k_unsucc = 0.5
+            Sigma(qix,1) = Sigma(qix,1) * k_unsucc;
         end
         
         %%% Update archive 

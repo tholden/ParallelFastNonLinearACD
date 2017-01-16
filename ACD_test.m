@@ -31,7 +31,6 @@ fcurrent = 1e+30;
 Order = 2;
 NonProductSearchDimension = 2;
 ProductSearchDimension = 2;
-Parallel = true;
 
 howOftenUpdateRotation = 1; % at each iteration -> quadratic time complexity of the algorithm, but need less function evaluations to reach the optimum
 % howOftenUpdateRotation = floor(dim/10); % every N/10 iterations -> linear time complexity of the algorithm, but need more function evaluations to reach the optimum
@@ -42,7 +41,10 @@ itertotal = 0;
 tic
 while (nevaltotal < MAX_EVAL) && (fcurrent > ftarget)
     maxeval_available = MAX_EVAL - nevaltotal;
-    [xmean, fcurrent, iter, neval] = ACD(ffunc,zeros(N,1),2.5,0,[],[],[],[],maxeval_available,ftarget,howOftenUpdateRotation,Order,NonProductSearchDimension,ProductSearchDimension,Parallel);
+    [xmean, fcurrent, iter, neval] = ACD( @(XV,mu) ffunc( XV ), zeros(N,1),2.5,0,[],[],[],[],maxeval_available,ftarget,howOftenUpdateRotation,Order,NonProductSearchDimension,ProductSearchDimension,false);
+    % [xmean, fcurrent, iter, neval] = ACD( @(XV,mu) ParForParallelWrapper( ffunc, XV, mu, 0 ), zeros(N,1),2.5,0,[],[],[],[],maxeval_available,ftarget,howOftenUpdateRotation,Order,NonProductSearchDimension,ProductSearchDimension,false);
+    % [xmean, fcurrent, iter, neval] = ACD( @(XV,mu) TimedParallelWrapper( ffunc, XV, mu, 5 ), zeros(N,1),2.5,0,[],[],[],[],maxeval_available,ftarget,howOftenUpdateRotation,Order,NonProductSearchDimension,ProductSearchDimension,false);
+    % [xmean, fcurrent, iter, neval] = ACD( @(XV,mu) SerialWrapper( ffunc, XV, mu, 0 ), zeros(N,1),2.5,0,[],[],[],[],maxeval_available,ftarget,howOftenUpdateRotation,Order,NonProductSearchDimension,ProductSearchDimension,false);
     nevaltotal = nevaltotal + neval;
     itertotal = itertotal + iter;
 end;
