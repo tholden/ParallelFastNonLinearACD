@@ -16,6 +16,7 @@
 %  * `NonProductSearchDimension`: NonProductSearchDimension*ProductSearchDimension determines how many dimensions to search in simultaneously. A (small) positive integer.
 %  * `ProductSearchDimension`: NonProductSearchDimension*ProductSearchDimension determines how many dimensions to search in simultaneously. A (small) positive integer.
 %  * `Parallel`: Determines whether to use a `parfor` loop to invoke the objective function. A logical.
+%  * `Resume`: Whether to resume the past run. A logical.
 %  
 %  Ouputs:
 %   * `xMean`: The optimal point.
@@ -36,7 +37,7 @@
 % This source code includes the Adaptive Encoding procedure by Nikolaus Hansen, 2008
 % ---------------------------------------------------------------
 
-function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, Sigma, MinSigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, NonProductSearchDimension, ProductSearchDimension, Parallel )
+function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, Sigma, MinSigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, NonProductSearchDimension, ProductSearchDimension, Parallel, Resume )
 
     xMean = xMean(:);
     
@@ -147,6 +148,11 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
     % -------------------- Generation Loop --------------------------------
 
     while (NEvaluations < MaxEvaluations) && (BestFitness > StopFitness)
+        if Resume
+            disp( 'Resuming from VariablesACD.mat' );
+            load VariablesACD.mat;
+            Resume = false;
+        end
         Iterations = Iterations + 1;
         ix = ix + 1;
         if ix > NoD
@@ -210,10 +216,6 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
             Sigma(qix,1) = Sigma(qix,1) * min( k_unsucc, foundAlpha * k_unsucc );   % default k_unsucc = 0.5
         end
         
-        if all( Sigma < MinSigma )
-            break
-        end
-
         %%% Update archive 
         finiteFit = find( isfinite( Fit ) );
         finiteIndices = ( ix - 1 ) * NPoints + finiteFit;
@@ -239,6 +241,12 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
         
         if rem(Iterations,1000) == 0
             disp([ num2str(Iterations) ' ' num2str(NEvaluations) ' ' num2str(BestFitness) ' ' num2str(min(Sigma)) ' ' num2str(norm(Sigma)) ' ' num2str(max(Sigma)) ]);
+        end
+        
+        save VariablesACD.mat;
+
+        if all( Sigma < MinSigma )
+            break
         end
     end
 end
