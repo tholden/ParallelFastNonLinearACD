@@ -23,8 +23,10 @@ function RV = TimedParallelWrapper( objective_function, XV, DesiredNumberOfNonTi
     RunTimes = RunTimes( oIndices );
     if ~isempty( sRV )
         [ ~, sIndices ] = sort( sRV );
-        if length( sIndices ) > DesiredNumberOfNonTimeouts
+        if length( sIndices ) >= DesiredNumberOfNonTimeouts
             sIndices = sIndices( 1:DesiredNumberOfNonTimeouts );
+        else
+            fprintf( 'Timeout appears to be too low. You may wish to modify the logic in ParallelWrapper.m.\nDesired %d, received %d.\n', DesiredNumberOfNonTimeouts, length( sIndices ) );
         end
         RunTimes = RunTimes( sIndices );
         MaxRunTime = max( RunTimes );
@@ -32,7 +34,7 @@ function RV = TimedParallelWrapper( objective_function, XV, DesiredNumberOfNonTi
         
         CurrentPool = gcp;
         TargetScale = DesiredNumberOfNonTimeouts ./ CurrentPool.NumWorkers;
-        TimeoutTarget = max( BestRunTime * ( TargetScale + 1 ), MaxRunTime * TargetScale );
+        TimeoutTarget = max( BestRunTime * ( TargetScale + 2 ), MaxRunTime * ( TargetScale + 1 ) );
         if isempty( Timeout )
             Timeout = TimeoutTarget;
         else
