@@ -121,6 +121,9 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
     fij = unique( max( fi, fj ) );
     VAbsSobolPoints( fij ) = [];
     
+    SobolPoints = SobolPoints ./ VAbsSobolPoints( 2 );
+    VAbsSobolPoints = VAbsSobolPoints ./ VAbsSobolPoints( 2 );
+    
     IdxSobolPoints = arrayfun( @(spc) find( abs( VAbsSobolPoints - abs( spc ) ) < seps, 1 ), SobolPoints );
     
     IdxCell_alpha = repmat( { 1 : UNPoints }, 1, ProductSearchDimension );
@@ -198,7 +201,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
         end
 
         %%% Adapt step-size sigma depending on the success/unsuccess of the previous search
-        foundAlpha = max( abs( alpha( :, minFitLoc ) ) );
+        foundAlpha = norm( alpha( :, minFitLoc ) );
         
         if lsucc % increase the step-size
             Sigma(qix,1) = Sigma(qix,1) * foundAlpha * k_succ;     % default k_succ = 1.1
@@ -235,7 +238,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
         end    
         
         if rem(Iterations,1000) == 0
-            disp([ num2str(Iterations) ' ' num2str(NEvaluations) ' ' num2str(BestFitness) ]);
+            disp([ num2str(Iterations) ' ' num2str(NEvaluations) ' ' num2str(BestFitness) ' ' num2str(min(Sigma)) ' ' num2str(norm(Sigma)) ' ' num2str(max(Sigma)) ]);
         end
     end
 end
