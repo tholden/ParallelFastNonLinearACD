@@ -96,7 +96,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction
     Order = max( 1, floor( Order ) ); %integer >=1
     HowOftenUpdateRotation = max( 1, floor( HowOftenUpdateRotation ) ); %integer >=1    
 
-    BestFitness = 1e+30;
+    BestFitness = FitnessFunction( xMean, 1 );
     NEvaluations = 0;
 
     B = eye(N,N);
