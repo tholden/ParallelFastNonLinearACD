@@ -1,4 +1,4 @@
-% `[ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, sigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, NonProductSearchDimension, ProductSearchDimension, Parallel );`
+% `[ xMean, BestFitness, Iterations, NEvaluations ] = ACD( FitnessFunction, xMean, Sigma, MinSigma, LB, UB, A, b, MaxEvaluations, StopFitness, HowOftenUpdateRotation, Order, NonProductSearchDimension, ProductSearchDimension, Resume );`
 % 
 % Inputs:
 %  * `FitnessFunction`: The objective function, a function handle. The objective must be vectorized, supporting a matrix of inputs (with one column per observation), and returning a vector of outputs. To assist with converting arbitrary functions to this form, three wrappers (SerialWrapper, ParForParallelWrapper, TimedParallelWrapper) are provided.
