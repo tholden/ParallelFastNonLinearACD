@@ -24,7 +24,6 @@ ffunc = @frosenbrock;
 %ffunc = @fschwefel;
 %ffunc = @fcigar;
 MAX_EVAL = 1000000*N;
-x_a = -5.0; x_b = 5.0;
 ftarget = 1e-10;
 fcurrent = 1e+30;
 
