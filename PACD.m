@@ -121,7 +121,6 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = PACD( FitnessFunctio
         
         Fit = FitnessFunction( x, size( x, 2 ) );
         NEvaluations = NEvaluations + size( x, 2 );
-        Fit( Fit > 0 ) = Inf;
         
         xDone = [ xMean, x ];
         [ Fit, sidxFit ] = sort( Fit );
