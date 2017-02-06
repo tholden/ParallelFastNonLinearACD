@@ -108,10 +108,8 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = PACD( FitnessFunctio
         dSigma = diag( Sigma ); % shift along qix'th principal component, the computational complexity is linear
         
         if QuickMode
-            disp( 'Quick search.' );
             CNPoints = 2 * N;
         else
-            disp( 'Full search.' );
             CNPoints = NPoints;
         end
         
@@ -171,10 +169,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = PACD( FitnessFunctio
                 end
             end
             x = setdiff( unique( x', 'rows' ), xDone', 'rows' )';
-            
-            disp( 'Extra search.' );
-            disp( [ ns size( x, 2 ) ] );
-            
+                       
             Fit = FitnessFunction( x, size( x, 2 ) );
             
             Fit( Fit > 0 ) = Inf;
@@ -191,7 +186,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = PACD( FitnessFunctio
         
         xMean = xNew;
         
-        if rem(Iterations,1000) == 0
+        if rem(Iterations,100) == 0
             disp([ num2str(Iterations) ' ' num2str(NEvaluations) ' ' num2str(BestFitness) ' ' num2str(NSucc) ' ' num2str(min(Sigma)) ' ' num2str(norm(Sigma)) ' ' num2str(max(Sigma)) ]);
         end
         
