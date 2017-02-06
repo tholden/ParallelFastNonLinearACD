@@ -28,23 +28,15 @@ x_a = -5.0; x_b = 5.0;
 ftarget = 1e-10;
 fcurrent = 1e+30;
 
-Order = 2;
-NonProductSearchDimension = 2;
-ProductSearchDimension = 2;
-
-howOftenUpdateRotation = 1; % at each iteration -> quadratic time complexity of the algorithm, but need less function evaluations to reach the optimum
-% howOftenUpdateRotation = floor(dim/10); % every N/10 iterations -> linear time complexity of the algorithm, but need more function evaluations to reach the optimum
-% howOftenUpdateRotation = dim; % every N iterations
-
 nevaltotal = 0;
 itertotal = 0;
 tic
 while (nevaltotal < MAX_EVAL) && (fcurrent > ftarget)
     maxeval_available = MAX_EVAL - nevaltotal;
-    [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ffunc( XV ), zeros(N,1),[],[],[],[],false);
-    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ParForParallelWrapper( ffunc, XV, mu, 0 ), zeros(N,1),[],[],[],[],false);
-    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) TimedParallelWrapper( ffunc, XV, mu, 5 ), zeros(N,1),[],[],[],[],false);
-    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) SerialWrapper( ffunc, XV, mu, 0 ), zeros(N,1),[],[],[],[],false);
+    [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ffunc( log( XV ) ), randn(N,1),[],[],[],[],false);
+    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ParForParallelWrapper( ffunc, log( XV ), mu, 0 ), randn(N,1),[],[],[],[],false);
+    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) TimedParallelWrapper( ffunc, log( XV ), mu, 5 ), randn(N,1),[],[],[],[],false);
+    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) SerialWrapper( ffunc, log( XV ), mu, 0 ), randn(N,1),[],[],[],[],false);
     nevaltotal = nevaltotal + neval;
     itertotal = itertotal + iter;
 end;
