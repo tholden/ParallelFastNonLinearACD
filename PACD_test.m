@@ -33,10 +33,10 @@ itertotal = 0;
 tic
 while (nevaltotal < MAX_EVAL) && (fcurrent > ftarget)
     maxeval_available = MAX_EVAL - nevaltotal;
-    [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ffunc( log( XV ) ), randn(N,1),[],[],[],[],false);
-    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ParForParallelWrapper( ffunc, log( XV ), mu, 0 ), randn(N,1),[],[],[],[],false);
-    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) TimedParallelWrapper( ffunc, log( XV ), mu, 5 ), randn(N,1),[],[],[],[],false);
-    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) SerialWrapper( ffunc, log( XV ), mu, 0 ), randn(N,1),[],[],[],[],false);
+    [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ffunc( XV ), zeros(N,1),[],[],[],[],false);
+    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ParForParallelWrapper( ffunc, XV, mu, 0 ), zeros(N,1),[],[],[],[],false);
+    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) TimedParallelWrapper( ffunc, XV, mu, 5 ), zeros(N,1),[],[],[],[],false);
+    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) SerialWrapper( ffunc, XV, mu, 0 ), zeros(N,1),[],[],[],[],false);
     nevaltotal = nevaltotal + neval;
     itertotal = itertotal + iter;
 end;

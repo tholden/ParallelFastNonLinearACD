@@ -1,8 +1,8 @@
 % `[ xMean, BestFitness, Iterations, NEvaluations ] = PACD( FitnessFunction, xMean, LB, UB, A, b, Resume );`
 % 
 % Inputs:
-%  * `FitnessFunction`: The objective function, a function handle. The objective must be vectorized, supporting a matrix of POSITIVE inputs (with one column per observation), and returning a vector of outputs. To assist with converting arbitrary functions to this form, three wrappers (SerialWrapper, ParForParallelWrapper, TimedParallelWrapper) are provided.
-%  * `xMean`: The POSITIVE initial point.
+%  * `FitnessFunction`: The objective function, a function handle. The objective must be vectorized, supporting a matrix of inputs (with one column per observation), and returning a vector of outputs. To assist with converting arbitrary functions to this form, three wrappers (SerialWrapper, ParForParallelWrapper, TimedParallelWrapper) are provided.
+%  * `xMean`: The initial point.
 %  * `LB`: A lower bound on the search for `xMean`. Either empty, a scalar, or a vector of lower bounds by coordinate, with the same number of elements as xMean.
 %  * `UB`: A lower bound on the search for `xMean`. Either empty, a scalar, or a vector of upper bounds by coordinate, with the same number of elements as xMean.
 %  * `A`: The `A` matrix from the inequality `A*x <= b`. May be empty if `b` is also empty.
@@ -104,7 +104,7 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = PACD( FitnessFunctio
         Iterations = Iterations + 1;
         
         %%% Sample NPoints candidate solutions
-        Sigma = eps ^ ( 1 / 3 ) * abs( xMean );
+        Sigma = eps ^ ( 1 / 3 ) * max( 1, abs( xMean ) );
         dSigma = diag( Sigma ); % shift along qix'th principal component, the computational complexity is linear
         
         if QuickMode
