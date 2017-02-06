@@ -24,23 +24,14 @@ ffunc = @frosenbrock;
 %ffunc = @fschwefel;
 %ffunc = @fcigar;
 MAX_EVAL = 1000000*N;
-x_a = -5.0; x_b = 5.0;
 ftarget = 1e-10;
-fcurrent = 1e+30;
 
-nevaltotal = 0;
-itertotal = 0;
-tic
-while (nevaltotal < MAX_EVAL) && (fcurrent > ftarget)
-    maxeval_available = MAX_EVAL - nevaltotal;
-    [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ffunc( XV ), zeros(N,1),[],[],[],[],false);
-    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ParForParallelWrapper( ffunc, XV, mu, 0 ), zeros(N,1),[],[],[],[],false);
-    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) TimedParallelWrapper( ffunc, XV, mu, 5 ), zeros(N,1),[],[],[],[],false);
-    % [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) SerialWrapper( ffunc, XV, mu, 0 ), zeros(N,1),[],[],[],[],false);
-    nevaltotal = nevaltotal + neval;
-    itertotal = itertotal + iter;
-end;
-
+tic;
+[xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ffunc( XV ), zeros(N,1),[],[],[],[],false);
+% [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) ParForParallelWrapper( ffunc, XV, mu, 0 ), zeros(N,1),[],[],[],[],false);
+% [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) TimedParallelWrapper( ffunc, XV, mu, 5 ), zeros(N,1),[],[],[],[],false);
+% [xmean, fcurrent, iter, neval] = PACD( @(XV,mu) SerialWrapper( ffunc, XV, mu, 0 ), zeros(N,1),[],[],[],[],false);
 toc;
-disp([num2str(itertotal) ' ' num2str(nevaltotal) ' ' num2str(fcurrent)]);
+
+disp([num2str(iter) ' ' num2str(neval) ' ' num2str(fcurrent)]);
 
