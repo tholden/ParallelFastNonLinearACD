@@ -191,7 +191,9 @@ function [ xMean, BestFitness, Iterations, NEvaluations ] = PACD( FitnessFunctio
         
         xMean = xNew;
         
-        disp([ num2str(Iterations) ' ' num2str(NEvaluations) ' ' num2str(BestFitness) ' ' num2str(NSucc) ' ' num2str(min(Sigma)) ' ' num2str(norm(Sigma)) ' ' num2str(max(Sigma)) ]);
+        if rem(Iterations,1000) == 0
+            disp([ num2str(Iterations) ' ' num2str(NEvaluations) ' ' num2str(BestFitness) ' ' num2str(NSucc) ' ' num2str(min(Sigma)) ' ' num2str(norm(Sigma)) ' ' num2str(max(Sigma)) ]);
+        end
         
         save VariablesPACD.mat;
 
